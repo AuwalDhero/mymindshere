@@ -1,0 +1,91 @@
+s<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech-to-Text</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        #startRecording {
+            animation: listeningAnimation 1s alternate infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-top min-h-screen bg-gradient-to-b from-blue-200 to-blue-400">
+    
+    <img src="logo.png" class="object-contain w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32 mx-auto my-4 sm:my-6 md:my-8 lg:my-10 xl:my-12">
+
+    <h1 class="mb-10 text-xl font-semibold text-center bg-gray-200 py-4 px-6 rounded-lg border-2 border-gray-400 shadow-md">How can I help you?</h1>
+
+    <div class="flex items-center space-x-2">
+        <label class="block mb-2" for="startRecording">Click to start recording:</label>
+        <button id="startRecording" class="mb-5 bg-blue-900 hover:bg-blue-700 text-white font-semibold md:py-5 md:px-7 py-4 px-6 rounded-full">
+            Start
+        </button>
+    </div>
+    <div class="flex items-center space-x-2">
+        <label class="block mb-2" for="startRecording">Click to stop recording:</label>
+        <button id="stopRecording" class="bg-pink-500 hover:bg-red-700 text-white font-semibold md:py-5 md:px-7 py-4 px-6 rounded-full">
+            Stop
+        </button>
+    </div>
+    <div id="transcription"></div>
+    <div id="response"></div>
+
+    <script>
+        const startButton = document.getElementById("startRecording");
+        const stopButton = document.getElementById("stopRecording");
+        const transcriptionDiv = document.getElementById("transcription");
+        const responseDiv = document.getElementById("response");
+
+        let recognition = new webkitSpeechRecognition();
+        recognition.continuous = true; // Enable continuous speech recognition
+
+        recognition.onresult = function(event) {
+            const result = event.results[event.results.length - 1][0].transcript;
+            transcriptionDiv.textContent = result;
+        };
+
+        recognition.onend = function() {
+            startButton.disabled = false;
+            stopButton.disabled = true;
+
+            // Send the transcribed text to the server for response generation
+            const transcribedText = transcriptionDiv.textContent;
+            fetch('http://localhost:3000/process_transcription', {
+                method: 'POST',
+                body: JSON.stringify({
+                    transcription: transcribedText
+                }),
+                // Add a route handler for the root URL
+
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+               
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display the response in the "response" div
+                responseDiv.textContent = data.message; // Assuming the response has a "message" field
+            })
+            .catch(error => {
+                console.error(error);
+            });
+        };
+
+        startButton.addEventListener("click", function() {
+            recognition.start();
+            startButton.disabled = true;
+            stopButton.disabled = false;
+        });
+
+        stopButton.addEventListener("click", function() {
+            recognition.stop();
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        });
+        
+    </script>
+</body>
+</html>
